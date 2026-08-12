@@ -6,6 +6,7 @@ import shutil
 import time
 import zipfile
 from datetime import datetime
+import argparse
 
 # letter pattern including Unicode for unit names
 L = ",a-zA-Z\\u00C0-\\u017F"
@@ -348,44 +349,73 @@ def create_zip_file(source_file, zip_filename):
                                                                                              arcname=os.path.basename(
                                                                                                  source_file))
 
-if __name__ == "__main__":
+parser = argparse.ArgumentParser(
+    prog = 'osc_service_add',
+    description = 'Prepare Wow CombatLogs to be uploaded to TurtleLogs',
+    epilog = '')
+
+parser.add_argument('logfile')
+parser.add_argument('-p', '--player-name', dest = 'playerName', help = "Player Name")
+parser.add_argument('-Z', '--zip-file', dest = 'zipFile',
+                    action = "store_true",
+                    help = "Zip Log File")
+parser.add_argument('-r', '--rename', dest = 'rename',
+                    action = "store_true",
+                    help = "Rename log file")
+
+args = parser.parse_args()
+
+player_name = args.playerName
+if not player_name:
+    player_name = input("Enter player name: ")
+
+if not args.logfile:
     filename = input("Enter filename (defaults to WoWCombatLog.txt if left empty): ")
     if not filename.strip():
         filename = 'WoWCombatLog.txt'
+else:
+    filename = args.logfile
 
+create_zip = args.zipFile
+if not create_zip:
     create_zip = input("Create zip file (default y): ")
+    if create_zip == "y":
+        create_zip = True
 
+rename_file = args.rename
+if not rename_file:
     rename_file = input("Rename input file to TurtLog-{timestamp}.txt (default y): ")
+    if rename_file == "y":
+        rename_file = True
+# Read file to detect player names from COMBATANT_INFO
+print("Detecting player name(s) from COMBATANT_INFO...")
+with open(filename, 'r', encoding='utf-8', errors='replace') as file:
+    lines = file.readlines()
 
-    # Read file to detect player names from COMBATANT_INFO
-    print("Detecting player name(s) from COMBATANT_INFO...")
-    with open(filename, 'r', encoding='utf-8', errors='replace') as file:
-        lines = file.readlines()
+player_entries = detect_player_names(lines)
 
-    player_entries = detect_player_names(lines)
+if player_entries:
+    unique_players = list(set(name for _, name in player_entries))
+    print(f"Detected player(s) for you: {', '.join(unique_players)}")
+else:
+    print("No player detected from COMBATANT_INFO with full talent information.  This is needed to determine which player 'You' refers to at different timestamps in the log.")
 
-    if player_entries:
-        unique_players = list(set(name for _, name in player_entries))
-        print(f"Detected player(s) for you: {', '.join(unique_players)}")
-    else:
-        print("No player detected from COMBATANT_INFO with full talent information.  This is needed to determine which player 'You' refers to at different timestamps in the log.")
+replace_instances(player_entries, filename)
 
-    replace_instances(player_entries, filename)
+if not rename_file.strip() or rename_file.lower().startswith('y'):
+    # rename output file to TurtLog-YY-MM-DDTHH-MM.txt
+    timestamp = time.strftime("%Y-%m-%dT%H-%M")
+    new_filename = f"TurtLog-{timestamp}.txt"
+    os.rename(filename, new_filename)
+    filename = new_filename
 
-    if not rename_file.strip() or rename_file.lower().startswith('y'):
-        # rename output file to TurtLog-YY-MM-DDTHH-MM.txt
-        timestamp = time.strftime("%Y-%m-%dT%H-%M")
-        new_filename = f"TurtLog-{timestamp}.txt"
-        os.rename(filename, new_filename)
-        filename = new_filename
+if create_zip:
+    create_zip_file(filename, filename + ".zip")
 
-    if not create_zip.strip() or create_zip.lower().startswith('y'):
-        create_zip_file(filename, filename + ".zip")
-
-    if player_entries:
-        unique_players = list(set(name for _, name in player_entries))
-        player_names_str = ', '.join(unique_players)
-        print(
-            f"Messages with You/Your have been converted to {player_names_str}.  A backup of the original file has also been created.")
-    else:
-        print("File processing complete. A backup of the original file has also been created.")
+if player_entries:
+    unique_players = list(set(name for _, name in player_entries))
+    player_names_str = ', '.join(unique_players)
+    print(
+        f"Messages with You/Your have been converted to {player_names_str}.  A backup of the original file has also been created.")
+else:
+    print("File processing complete. A backup of the original file has also been created.")

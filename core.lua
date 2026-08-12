@@ -1045,11 +1045,11 @@ RPLL.PLAYER_ENTERING_WORLD = function()
 	end
 	initialized = true
 
-	-- add (1) for first stack of buffs/debuffs
-	AURAADDEDOTHERHELPFUL = "%s gains %s (1)."
-	AURAADDEDOTHERHARMFUL = "%s is afflicted by %s (1)."
-	AURAADDEDSELFHARMFUL = "You are afflicted by %s (1)."
-	AURAADDEDSELFHELPFUL = "You gain %s (1)."
+	-- add for first stack of buffs/debuffs
+	AURAADDEDOTHERHELPFUL = "%s gains %s."
+	AURAADDEDOTHERHARMFUL = "%s is afflicted by %s."
+	AURAADDEDSELFHARMFUL = "You are afflicted by %s."
+	AURAADDEDSELFHELPFUL = "You gain %s."
 
   -- Rate limiting cache for player info scanning (timestamps only, session-only)
   this.PlayerInformation = {}
